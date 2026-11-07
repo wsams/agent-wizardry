@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent Wizardry catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "project", "tasks"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "summary"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "docs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "briefing": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "body"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "body": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/task" }
+    }
+  },
+  "$defs": {
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "summary", "kind", "source", "danger", "surface"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$" },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "details": { "type": "string" },
+        "kind": {
+          "enum": ["script", "npm", "make", "just", "task", "workflow", "compose", "manual", "app"]
+        },
+        "source": { "type": "string", "minLength": 1 },
+        "danger": { "enum": ["safe", "writes", "destructive"] },
+        "confirm": { "type": "boolean" },
+        "surface": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["cli", "web"] }
+        },
+        "prerequisites": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/input" }
+        },
+        "run": { "$ref": "#/$defs/run" },
+        "steps": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "href": { "type": "string", "minLength": 1 }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv"],
+      "properties": {
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "cwd": { "type": "string", "minLength": 1 }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "prompt"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$" },
+        "name": { "type": "string", "minLength": 1 },
+        "prompt": { "type": "string", "minLength": 1 },
+        "help": { "type": "string" },
+        "type": { "enum": ["string", "select", "confirm", "path", "multiline"] },
+        "required": { "type": "boolean" },
+        "default": { "type": ["string", "boolean"] },
+        "positional": { "type": "boolean" },
+        "choices": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "label"],
+            "properties": {
+              "value": { "type": "string", "minLength": 1 },
+              "label": { "type": "string", "minLength": 1 },
+              "help": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

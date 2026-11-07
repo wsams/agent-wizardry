@@ -1,0 +1,79 @@
+{
+  "$schema": "../.agents/skills/agent-wizardry/catalog.schema.json",
+  "version": 1,
+  "project": {
+    "name": "Agent Wizardry",
+    "summary": "A skill any coding agent can follow. The agent reads a repository and builds a wizard in that repository's language.",
+    "docs": ["README.md", "AGENTS.md"]
+  },
+  "briefing": [
+    {
+      "title": "What this repository is",
+      "body": "The skill is .agents/skills/agent-wizardry/SKILL.md, in the Agent Skills format. This wizard operates Agent Wizardry itself, and it is Python because this repository's tooling is Python. Install the skill into ~/.agents/skills before asking an agent to wizard a different project."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "run-tests",
+      "title": "Run the catalog tests",
+      "summary": "Run the unittest suite that locks the validator, the runner, and the example catalogs.",
+      "kind": "make",
+      "source": "Makefile",
+      "danger": "safe",
+      "confirm": false,
+      "surface": ["cli"],
+      "prerequisites": ["Python 3.10 or newer"],
+      "run": {
+        "argv": ["make", "test"],
+        "cwd": "."
+      }
+    },
+    {
+      "id": "validate-catalogs",
+      "title": "Validate the catalogs",
+      "summary": "Check this repo's catalog and the example catalogs against the Agent Wizardry rules.",
+      "kind": "make",
+      "source": "Makefile",
+      "danger": "safe",
+      "confirm": false,
+      "surface": ["cli"],
+      "run": {
+        "argv": ["make", "validate"],
+        "cwd": "."
+      }
+    },
+    {
+      "id": "run-ci",
+      "title": "Run the test workflow on GitHub",
+      "summary": "Start the Test workflow on the current repository through GitHub Actions.",
+      "details": "Requires the gh CLI, authenticated to a remote that has .github/workflows/test.yml. This does not run tests on your machine. Use the local test task for that.",
+      "kind": "workflow",
+      "source": ".github/workflows/test.yml",
+      "danger": "writes",
+      "confirm": true,
+      "surface": ["cli"],
+      "prerequisites": ["gh is authenticated", "This repo has a GitHub remote"],
+      "run": {
+        "argv": ["gh", "workflow", "run", "test.yml"],
+        "cwd": "."
+      }
+    },
+    {
+      "id": "install-skill",
+      "title": "Install the skill for every project",
+      "summary": "Symlink this skill into the personal skill directories read by Claude Code, GitHub Copilot, Cursor, Grok, and Codex.",
+      "details": "The folder name stays agent-wizardry. Claude Code reads ~/.claude/skills. Copilot reads ~/.copilot/skills and ~/.agents/skills. Cursor reads ~/.cursor/skills and ~/.agents/skills. Grok reads ~/.grok/skills and ~/.agents/skills. Codex reads ~/.agents/skills. The commands are the Install section of README.md.",
+      "kind": "manual",
+      "source": "README.md",
+      "danger": "writes",
+      "confirm": true,
+      "surface": ["cli"],
+      "steps": [
+        "From a clone of this repository, set src to \"$PWD/.agents/skills/agent-wizardry\".",
+        "For each of ~/.agents/skills, ~/.claude/skills, ~/.copilot/skills, ~/.cursor/skills, and ~/.grok/skills, run mkdir -p on the directory and ln -sfn \"$src\" \"$dir/agent-wizardry\".",
+        "Restart the agent. In Claude Code, run /reload-skills if the skills directory was created during the session.",
+        "Open another project and ask the agent to build a wizard in that project's language."
+      ]
+    }
+  ]
+}

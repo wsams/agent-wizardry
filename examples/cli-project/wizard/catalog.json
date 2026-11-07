@@ -1,0 +1,98 @@
+{
+  "$schema": "../../../.agents/skills/agent-wizardry/catalog.schema.json",
+  "version": 1,
+  "project": {
+    "name": "Sample operator project",
+    "summary": "A script and a workflow_dispatch workflow, cataloged so the wizard can ask for their flags before running them.",
+    "docs": ["README.md"]
+  },
+  "briefing": [
+    {
+      "title": "What you can run",
+      "body": "Deploy the sample locally with sample-script.sh, or see how a GitHub Actions input is recorded for gh workflow run. The workflow file in this folder is a fixture, not an installed workflow."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "deploy-sample",
+      "title": "Deploy the sample",
+      "summary": "Print a deploy line for staging or production. Pass a dry run to print the plan and write nothing.",
+      "details": "Staging is the default. The script accepts --env staging or --env production, and --dry-run. A dry run still belongs to a task that can write, so the wizard asks before it runs.",
+      "kind": "script",
+      "source": "sample-script.sh",
+      "danger": "writes",
+      "confirm": true,
+      "surface": ["cli"],
+      "prerequisites": ["You are in the sample project directory"],
+      "inputs": [
+        {
+          "id": "env",
+          "name": "--env",
+          "prompt": "Which environment?",
+          "help": "staging is the default. production is the other accepted value.",
+          "type": "select",
+          "required": true,
+          "default": "staging",
+          "choices": [
+            {
+              "value": "staging",
+              "label": "Staging",
+              "help": "The default target."
+            },
+            {
+              "value": "production",
+              "label": "Production",
+              "help": "Prints a production deploy line."
+            }
+          ]
+        },
+        {
+          "id": "dry-run",
+          "name": "--dry-run",
+          "prompt": "Dry run?",
+          "help": "Print the plan and write nothing.",
+          "type": "confirm",
+          "default": false
+        }
+      ],
+      "run": {
+        "argv": ["sh", "sample-script.sh"],
+        "cwd": "."
+      }
+    },
+    {
+      "id": "dispatch-deploy",
+      "title": "Dispatch the sample deploy workflow",
+      "summary": "Start the sample workflow with its environment input.",
+      "details": "gh workflow run takes each workflow_dispatch input as -f name=value. This fixture's file is sample-workflow.yml. A real project points the command at the workflow file that is installed in .github/workflows.",
+      "kind": "workflow",
+      "source": "sample-workflow.yml",
+      "danger": "writes",
+      "confirm": true,
+      "surface": ["cli"],
+      "prerequisites": [
+        "The gh CLI is authenticated",
+        "The workflow is installed on the GitHub repo you are targeting"
+      ],
+      "inputs": [
+        {
+          "id": "environment",
+          "name": "-f",
+          "prompt": "Which environment?",
+          "help": "Sets the workflow_dispatch input named environment.",
+          "type": "select",
+          "required": true,
+          "default": "environment=staging",
+          "choices": [
+            { "value": "environment=staging", "label": "Staging" },
+            { "value": "environment=production", "label": "Production" }
+          ]
+        }
+      ],
+      "run": {
+        "argv": ["gh", "workflow", "run", "sample-workflow.yml"],
+        "cwd": "."
+      }
+    }
+  ]
+}

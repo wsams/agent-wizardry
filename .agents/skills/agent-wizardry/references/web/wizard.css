@@ -1,0 +1,199 @@
+.aw-wizard,
+.aw-backdrop {
+  --aw-bg: #161920;
+  --aw-bg-deep: #0d0f14;
+  --aw-border: #2a2d3e;
+  --aw-accent: #7c6af7;
+  --aw-accent-2: #50e3c2;
+  --aw-text: #e8eaf0;
+  --aw-muted: #7a7f9a;
+  --aw-danger: #f25c6e;
+  --aw-warn: #f7a234;
+  --aw-ok: #50e3a4;
+  --aw-radius: 12px;
+  color: var(--aw-text);
+  font: inherit;
+}
+
+.aw-wizard-button,
+.aw-action,
+.aw-back,
+.aw-close,
+.aw-task,
+.aw-choice {
+  font: inherit;
+  cursor: pointer;
+}
+
+.aw-wizard-button,
+.aw-action {
+  background: var(--aw-accent);
+  color: white;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.45rem 0.85rem;
+}
+
+.aw-wizard-button:focus-visible,
+.aw-action:focus-visible,
+.aw-back:focus-visible,
+.aw-close:focus-visible,
+.aw-task:focus-visible,
+.aw-choice:focus-visible {
+  outline: 2px solid var(--aw-accent-2);
+  outline-offset: 2px;
+}
+
+.aw-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.aw-dialog {
+  width: min(36rem, 100%);
+  max-height: min(40rem, 100%);
+  overflow: auto;
+  background: var(--aw-bg);
+  border: 1px solid var(--aw-border);
+  border-radius: var(--aw-radius);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  padding: 1.25rem 1.35rem 1.4rem;
+}
+
+.aw-dialog-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.aw-dialog h2,
+.aw-dialog h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.aw-close,
+.aw-back {
+  background: transparent;
+  color: var(--aw-text);
+  border: 1px solid var(--aw-border);
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+}
+
+.aw-summary,
+.aw-muted {
+  color: var(--aw-muted);
+}
+
+.aw-summary {
+  margin: 0.4rem 0 0;
+}
+
+.aw-briefing {
+  margin: 1rem 0;
+  padding-left: 1.1rem;
+}
+
+.aw-briefing h3 {
+  font-size: 1rem;
+  margin-bottom: 0.2rem;
+}
+
+.aw-tasks,
+.aw-steps,
+.aw-prereq {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.aw-steps,
+.aw-prereq {
+  list-style: disc;
+  padding-left: 1.2rem;
+}
+
+.aw-task,
+.aw-choice {
+  text-align: left;
+  width: 100%;
+  background: #1d2030;
+  color: var(--aw-text);
+  border: 1px solid var(--aw-border);
+  border-radius: var(--aw-radius);
+  padding: 0.75rem 0.85rem;
+}
+
+.aw-task:hover,
+.aw-choice:hover {
+  border-color: var(--aw-accent);
+}
+
+.aw-choice[aria-checked="true"] {
+  border-color: var(--aw-accent-2);
+}
+
+.aw-task-title,
+.aw-choice-label {
+  display: block;
+  font-weight: 600;
+}
+
+.aw-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--aw-bg-deep);
+}
+
+.aw-badge-safe { background: var(--aw-ok); }
+.aw-badge-writes { background: var(--aw-warn); }
+.aw-badge-destructive { background: var(--aw-danger); color: white; }
+
+.aw-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.aw-task .aw-muted,
+.aw-choice .aw-muted {
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.aw-field {
+  margin-top: 0.9rem;
+  border: 0;
+  padding: 0;
+}
+
+.aw-field input:not([type="checkbox"]) {
+  display: block;
+  width: 100%;
+  margin-top: 0.35rem;
+  box-sizing: border-box;
+  background: var(--aw-bg-deep);
+  color: var(--aw-text);
+  border: 1px solid var(--aw-border);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+}
+
+.aw-field p {
+  margin: 0.25rem 0 0.4rem;
+}

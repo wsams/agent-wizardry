@@ -1,0 +1,61 @@
+{
+  "$schema": "../../../.agents/skills/agent-wizardry/catalog.schema.json",
+  "version": 1,
+  "project": {
+    "name": "Sample docs workspace",
+    "summary": "A workspace that starts empty until you import a document.",
+    "docs": ["README.md"]
+  },
+  "briefing": [
+    {
+      "title": "Start here",
+      "body": "The workspace is empty until a document is imported. Import accepts Markdown, HTML, and DOCX, and the file stays in the current workspace."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "import-first-document",
+      "title": "Import your first document",
+      "summary": "Bring a document into the current workspace so the app has something to show.",
+      "details": "Import accepts Markdown, HTML, and DOCX. Markdown headings become the outline, HTML tags become blocks, and Word comments are dropped. The file stays in the current workspace.",
+      "kind": "app",
+      "source": "README.md",
+      "danger": "writes",
+      "confirm": true,
+      "surface": ["web"],
+      "href": "/import",
+      "prerequisites": ["You are signed in", "A workspace is selected"],
+      "steps": [
+        "Open Import.",
+        "Choose Markdown, HTML, or DOCX.",
+        "Leave the document in the current workspace."
+      ],
+      "inputs": [
+        {
+          "id": "format",
+          "name": "format",
+          "prompt": "What are you importing?",
+          "type": "select",
+          "required": true,
+          "choices": [
+            {
+              "value": "markdown",
+              "label": "Markdown",
+              "help": "Headings become the outline."
+            },
+            {
+              "value": "html",
+              "label": "HTML",
+              "help": "Tags are converted to blocks."
+            },
+            {
+              "value": "docx",
+              "label": "Word",
+              "help": "Comments are dropped."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
