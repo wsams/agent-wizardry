@@ -352,7 +352,7 @@ def run_task(
 ) -> int:
     if "cli" not in (task.get("surface") or []):
         raise SystemExit(
-            f"{task.get('id')} is a product task. Open the Wizard button in the app."
+            f"{task.get('id')} is a product task. Open the wizard in the app."
         )
     show_task_context(task)
     if task.get("kind") in GUIDED or "run" not in task:

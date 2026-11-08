@@ -105,9 +105,29 @@ Record each Actions input as a `-f` select (or string). The choice value include
 
 `run.argv` is `["gh", "workflow", "run", "<workflow-file>"]`.
 
+## Placements
+
+Omit `placements` when one mark can offer every web task. The product wizard then shows one mark, and that mark lists every web task.
+
+Add `placements` when different parts of the product have different next steps. Each object is one mark:
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `id` | yes | Kebab-case, unique. The UI passes this id when it renders the mark. |
+| `title` | yes | Heading of the dialog this mark opens. |
+| `where` | yes | Where the mark sits, so a later agent can find the control. |
+| `context` | yes | What the person is looking at. The dialog shows this before the tasks. |
+| `tasks` | yes | Ids of tasks whose surface includes `web`, in the order to offer them. |
+
+A task may appear in more than one placement. Every web task appears in at least one, so a product task is not written and then hidden. Operator tasks stay out of placements. The operator wizard ignores this key.
+
+The mark is 🧙. Its accessible name is "Wizard", plus the placement title when the catalog has placements. There is no hat-only emoji. Do not use 🎩, and do not spell the word Wizard beside the mark.
+
+Two spots that offer the same tasks reuse one placement id. A different set of tasks gets a new placement and its own mark.
+
 ## Web subset
 
-`validate_catalog.py --write-web wizard/catalog.web.json` writes `version`, `project`, `briefing`, and the tasks whose surface includes `web`. `--check-web` fails when that file drifts. Edit `wizard/catalog.json`, then regenerate. Do not hand-edit the subset.
+`validate_catalog.py --write-web wizard/catalog.web.json` writes `version`, `project`, `briefing`, `placements` when that key is present, and the tasks whose surface includes `web`. `--check-web` fails when that file drifts. Edit `wizard/catalog.json`, then regenerate. Do not hand-edit the subset.
 
 ## Operator program
 

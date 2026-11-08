@@ -12,6 +12,15 @@
       "body": "The workspace is empty until a document is imported. Import accepts Markdown, HTML, and DOCX, and the file stays in the current workspace."
     }
   ],
+  "placements": [
+    {
+      "id": "empty-workspace",
+      "title": "Empty workspace",
+      "where": "The empty workspace, beside the prompt to import a document",
+      "context": "This workspace has no document yet. Import is the way to give it one.",
+      "tasks": ["import-first-document"]
+    }
+  ],
   "tasks": [
     {
       "id": "import-first-document",

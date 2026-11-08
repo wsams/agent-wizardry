@@ -26,12 +26,14 @@ jobs:
 
       - name: Install semantic-release
         run: |
+          # Preset 10 requires conventional-changelog-writer 9.
+          # semantic-release still loads writer 8, so stay on preset 9.
           npm install --no-save \
             semantic-release \
             @semantic-release/changelog \
             @semantic-release/git \
             @semantic-release/github \
-            conventional-changelog-conventionalcommits
+            conventional-changelog-conventionalcommits@9.3.1
 
       - name: Release
         env:

@@ -5,23 +5,24 @@ description: >-
   CLI flags, and docs, then has the agent build a project wizard in that
   project's language. The wizard is backed by wizard/catalog.json, explains
   each task and its flags before running it, and adds an AGENTS.md contract
-  so later agents keep it current. Adds a Wizard button in the app's existing
-  UI when newcomers cannot tell what to do. Use when the user asks for a
-  project wizard, Agent Wizardry, an onboarding wizard, help operating an
-  unfamiliar repo, or a wizard button in the UI.
+  so later agents keep it current. Adds a wizard mark (🧙) in the app's
+  existing UI, once or in several sections, and each mark opens only the
+  tasks for that place. Use when the user asks for a project wizard, Agent
+  Wizardry, an onboarding wizard, help operating an unfamiliar repo, or a
+  wizard in the UI.
 ---
 
 # Agent Wizardry
 
 You are the agent. You inventory the repository in front of you and you build the wizard in the language that repository already uses. This skill is the contract. It is not tied to one agent product, and it does not install a prebuilt wizard.
 
-Leave a catalog, an operator wizard you wrote, and an AGENTS.md contract. Add a Wizard button in the product only when [web-wizard.md](web-wizard.md) says to.
+Leave a catalog, an operator wizard you wrote, and an AGENTS.md contract. Add wizard marks in the product only when [web-wizard.md](web-wizard.md) says to.
 
 Vocabulary:
 
 - **Catalog** — `wizard/catalog.json`, the only task list. Language-neutral.
 - **Operator wizard** — the program you write. It runs catalog tasks on the machine where the repo is checked out.
-- **Product wizard** — a Wizard button you add in the app's existing UI. It explains product tasks and opens screens. It does not run shell commands.
+- **Product wizard** — wizard marks (🧙) you add in the app's existing UI. Each mark explains the product tasks for that place and opens screens. It does not run shell commands.
 - **Contract** — the `## Agent Wizardry` section in `AGENTS.md`. It names the command you actually created.
 
 Read [catalog-spec.md](catalog-spec.md), [web-wizard.md](web-wizard.md), and [agents-contract.md](agents-contract.md) before writing files. Read [examples.md](examples.md) when the shape of a task is unclear. Read `references/wizard.py` for the operator behavior, and `references/web/` for the product behavior. Those files are references. Reimplement them. Copy one only when the project is already that language and the file fits without adding a runtime.
@@ -45,7 +46,7 @@ If a catalog or a wizard program already exists, start from it. Keep task ids th
 Use the language this project already runs.
 
 - Prefer the language of the maintainer scripts, or the language the README uses to build and run the app.
-- A product wizard uses the UI framework already in the app. A React app gets a React button. A Vue, Svelte, server-rendered, or template app gets the same behavior in that stack.
+- A product wizard uses the UI framework already in the app. A React app gets the React mark. A Vue, Svelte, server-rendered, or template app gets the same mark in that stack.
 - When the user names a language, use that.
 - Do not add a language, runtime, package manager, or UI framework to host the wizard.
 
@@ -97,7 +98,7 @@ Do not paste the catalog into the program. The catalog stays the file later agen
 
 ## Product wizard
 
-Follow [web-wizard.md](web-wizard.md). Build the button in the UI the app already has. `references/web/WizardPanel.tsx` shows the behavior in React. Translate it when the app is not React.
+Follow [web-wizard.md](web-wizard.md). Build the mark in the UI the app already has. `references/web/WizardPanel.tsx` shows the behavior in React: the mark is 🧙, and a `placement` prop limits the dialog to that place's tasks. Translate it when the app is not React.
 
 Publish a web subset the browser can see, and point the button at that file rather than the full catalog. When Python is available:
 
@@ -105,7 +106,7 @@ Publish a web subset the browser can see, and point the button at that file rath
 python <skill-dir>/scripts/validate_catalog.py wizard/catalog.json --write-web wizard/catalog.web.json
 ```
 
-`<skill-dir>` is the directory that contains this `SKILL.md`. When Python is not available, write the same subset by hand from the spec: `version`, `project`, `briefing`, and the tasks whose surface includes `web`.
+`<skill-dir>` is the directory that contains this `SKILL.md`. When Python is not available, write the same subset by hand from the spec: `version`, `project`, `briefing`, `placements` when the catalog has them, and the tasks whose surface includes `web`.
 
 Wire links and callbacks only to screens and handlers the app already has. Do not add an API whose job is to shell out to the repository. Do not add a language model unless the app already calls one. When it does, the catalog is the context, and the assistant may only recommend catalog tasks.
 
@@ -137,5 +138,5 @@ Tell the user:
 - Which language you used, and why it was already the project's
 - The operator tasks you wrote
 - The command that starts the wizard
-- Each of the four product-wizard answers, and either the component path or the answer that kept the button out
+- Each of the four product-wizard answers, and either each placement (its id, where it sits, and its tasks) or the answer that kept the marks out
 - Anything you left uncataloged because the source did not support it

@@ -4,7 +4,7 @@ A repository starts with one command. Then it grows a Makefile, a deploy script,
 
 Agent Wizardry is a skill any coding agent can follow. Point an agent at a repository and it reads the scripts, workflows, and docs, then builds a wizard in the language that project already uses. The list of tasks is the same everywhere. The program that asks the questions is whatever fits the repo: Python, Go, TypeScript, PHP, a shell, or the UI framework the app already has.
 
-When the confusing part is the product itself, the agent adds a **Wizard** button to the interface the app already ships. The button asks what you want to do and walks you through the setup the app actually supports. In the repository, the operator wizard does the same job for the scripts and workflows, in whatever language that repository is built with.
+When the confusing part is the product itself, the agent adds a wizard mark (🧙) to the interface the app already ships. One mark covers the product when every newcomer faces the same next step. When different sections have different next steps, each section gets its own mark, and that mark only offers the tasks for that place. In the repository, the operator wizard does the same job for the scripts and workflows, in whatever language that repository is built with.
 
 ## What the agent leaves behind
 
@@ -26,13 +26,13 @@ The catalog records each task, the file it came from, the flags and their defaul
 
 `safe` tasks ask with a default of yes. `writes` tasks default to no. `destructive` tasks make you type the task id. The command is the argument list from the catalog, run with no shell.
 
-A product wizard, when the checklist calls for one, is a Wizard button in the header, built in the app's existing UI. The browser receives the web subset, not the deploy commands.
+A product wizard, when the checklist calls for one, is the 🧙 mark in the app's existing UI. The browser receives the web subset, including each placement, and not the deploy commands.
 
 ## Why it stays current
 
 The agent also writes a section into `AGENTS.md`. The next agent, whichever product it is, loads that section: if you add, rename, or change a script, a workflow, a flag, or a user-facing flow, you update the catalog in that same change, and you keep the wizard program in the language it was written in. The wizard is part of the project, not a snapshot taken on the day it was installed.
 
-The skill includes a Python reading of the operator behavior and a React reading of the product button, so an agent can see the interaction once. Those are references. A Go service gets a Go wizard. A Vue app gets a Vue button.
+The skill includes a Python reading of the operator behavior and a React reading of the product wizard, so an agent can see the interaction once. Those are references. A Go service gets a Go wizard. A Vue app gets the same mark in Vue.
 
 ## Scope
 
@@ -99,7 +99,7 @@ Open the project you want a wizard for and ask:
 
 For a product people get lost in:
 
-> Use Agent Wizardry, and add a Wizard button in the app's existing UI.
+> Use Agent Wizardry, and add the wizard mark in the app's existing UI. Put a separate mark on each section that has its own next step.
 
 The agent will tell you the command it created. In a Python repo that might be `python wizard.py`. In another repo it will be that repo's equivalent.
 
@@ -111,10 +111,10 @@ This repository's tooling is Python, so its own operator wizard is the Python re
 | --- | --- |
 | `.agents/skills/agent-wizardry/SKILL.md` | The procedure any agent follows |
 | `.agents/skills/agent-wizardry/catalog-spec.md` | Catalog fields, and the behavior every wizard implements |
-| `.agents/skills/agent-wizardry/web-wizard.md` | When to add a Wizard button, and how to build it in the host UI |
+| `.agents/skills/agent-wizardry/web-wizard.md` | When to add wizard marks, and how to build them in the host UI |
 | `.agents/skills/agent-wizardry/agents-contract.md` | The `AGENTS.md` section, copied into each project |
 | `.agents/skills/agent-wizardry/references/wizard.py` | A Python implementation of the operator behavior |
-| `.agents/skills/agent-wizardry/references/web/` | A React implementation of the product button |
+| `.agents/skills/agent-wizardry/references/web/` | A React implementation of the wizard mark |
 | `.agents/skills/agent-wizardry/scripts/validate_catalog.py` | Checks a catalog against the spec |
 | `examples/cli-project/` | A script and a workflow, cataloged |
 | `examples/web-project/` | A product task for an empty docs workspace |

@@ -125,6 +125,54 @@ class ValidateTests(unittest.TestCase):
             published = json.loads(target.read_text(encoding="utf-8"))
             self.assertNotIn("run", json.dumps(published))
             self.assertEqual(published["tasks"][0]["id"], "import-first-document")
+            self.assertEqual(published["placements"][0]["id"], "empty-workspace")
+            self.assertEqual(published["placements"][0]["tasks"], ["import-first-document"])
+
+    def test_placements_only_name_web_tasks(self) -> None:
+        root = self.make_project()
+        web = self.task("import-doc", kind="app", surface=["web"])
+        other = self.task("share-doc", kind="app", surface=["web"])
+        cli = self.task("deploy")
+        data = self.catalog([web, other, cli])
+        data["placements"] = [
+            {
+                "id": "empty",
+                "title": "Empty workspace",
+                "where": "Empty workspace",
+                "context": "Nothing has been imported.",
+                "tasks": ["import-doc"],
+            },
+            {
+                "id": "empty",
+                "title": "Also empty",
+                "where": "Header",
+                "context": "The person is in the header.",
+                "tasks": ["deploy", "import-doc"],
+            },
+        ]
+        errors = validate_catalog.validate(data, root)
+        self.assertTrue(any("duplicate id" in error for error in errors))
+        self.assertTrue(any("deploy" in error and "web" in error for error in errors))
+        self.assertTrue(any("share-doc" in error for error in errors))
+
+    def test_valid_placement_reaches_the_web_subset(self) -> None:
+        root = self.make_project()
+        web = self.task("import-doc", kind="app", surface=["web"])
+        data = self.catalog([web])
+        data["placements"] = [
+            {
+                "id": "empty",
+                "title": "Empty workspace",
+                "where": "Empty workspace",
+                "context": "Nothing has been imported.",
+                "tasks": ["import-doc"],
+            }
+        ]
+        self.assertEqual(validate_catalog.validate(data, root), [])
+        published = validate_catalog.web_view(data)
+        self.assertEqual(published["placements"][0]["id"], "empty")
+        self.assertEqual(published["tasks"][0]["id"], "import-doc")
+        self.assertNotIn("run", json.dumps(published))
 
     def test_operator_catalog_refuses_a_web_file(self) -> None:
         catalog = ROOT / "examples" / "cli-project" / "wizard" / "catalog.json"

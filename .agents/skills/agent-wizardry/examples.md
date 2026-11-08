@@ -34,9 +34,9 @@ Product-wizard checklist for this fixture: (1) no browser UI. Stop. Operator wiz
 
 `examples/web-project/` is a one-page description of a docs workspace. The only cataloged action is the import flow that `README.md` describes.
 
-Checklist: (1) yes, it is a browser UI. (2) yes, the empty workspace does not say what to do. (3) yes, the header can hold one Wizard button. (4) yes, import is a product action. Add the button. The task's `href` is `/import`. There is no `run` block.
+Checklist: (1) yes, it is a browser UI. (2) yes, the empty workspace does not say what to do. (3) yes, the empty workspace can hold the wizard mark. (4) yes, import is a product action. Add one placement, `empty-workspace`, and one mark there. The task's `href` is `/import`. There is no `run` block.
 
-A deploy script in that same repo would be a second task with `"surface": ["cli"]` and would be absent from `wizard/catalog.web.json`.
+A second section with a different next step gets its own placement and its own mark. Two spots that offer the same tasks reuse one placement id. A deploy script in that same repo would be a second task with `"surface": ["cli"]` and would be absent from `wizard/catalog.web.json` and from every placement.
 
 ## This repository
 

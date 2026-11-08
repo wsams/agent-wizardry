@@ -28,7 +28,8 @@ EXECUTABLE = {"script", "npm", "make", "just", "task", "workflow", "compose"}
 DANGERS = {"safe", "writes", "destructive"}
 SURFACES = {"cli", "web"}
 INPUT_TYPES = {"string", "select", "confirm", "path", "multiline"}
-TOP_KEYS = {"$schema", "version", "project", "briefing", "tasks"}
+TOP_KEYS = {"$schema", "version", "project", "briefing", "tasks", "placements"}
+PLACEMENT_KEYS = {"id", "title", "where", "context", "tasks"}
 PROJECT_KEYS = {"name", "summary", "docs"}
 BRIEFING_KEYS = {"title", "body"}
 TASK_KEYS = {
@@ -93,6 +94,8 @@ def validate(data: object, root: Path, catalog_path: Path | None = None) -> list
         add("tasks", "add at least one real task, or stop without inventing one")
     else:
         check_tasks(tasks, root, add)
+    if "placements" in data:
+        check_placements(data["placements"], tasks if isinstance(tasks, list) else [], add)
     return errors
 
 
@@ -372,6 +375,61 @@ def check_repo_file(source: object, root: Path, path: str, add) -> None:
         add(path, f"file does not exist: {file_part}")
 
 
+def check_placements(placements: object, tasks: list, add) -> None:
+    if not isinstance(placements, list) or not placements:
+        add("placements", "list each place the wizard mark appears, or omit the key")
+        return
+    web_ids = [
+        task.get("id")
+        for task in tasks
+        if isinstance(task, dict)
+        and isinstance(task.get("id"), str)
+        and "web" in (task.get("surface") or [])
+    ]
+    web_set = set(web_ids)
+    seen: set[str] = set()
+    covered: set[str] = set()
+    for index, placement in enumerate(placements):
+        path = f"placements[{index}]"
+        if not isinstance(placement, dict):
+            add(path, "must be an object")
+            continue
+        unknown = set(placement) - PLACEMENT_KEYS
+        if unknown:
+            add(path, f"unknown keys: {', '.join(sorted(unknown))}")
+        placement_id = placement.get("id")
+        if not isinstance(placement_id, str) or not ID_RE.fullmatch(placement_id):
+            add(f"{path}.id", "must be kebab-case starting with a letter")
+        elif placement_id in seen:
+            add(f"{path}.id", f"duplicate id {placement_id!r}")
+        else:
+            seen.add(placement_id)
+        require_text(placement.get("title"), f"{path}.title", add)
+        require_text(placement.get("where"), f"{path}.where", add)
+        require_text(placement.get("context"), f"{path}.context", add)
+        named = placement.get("tasks")
+        if not isinstance(named, list) or not named:
+            add(f"{path}.tasks", "list the task ids this place offers")
+            continue
+        local: set[str] = set()
+        for task_index, task_id in enumerate(named):
+            item = f"{path}.tasks[{task_index}]"
+            if not isinstance(task_id, str) or not task_id:
+                add(item, "must be a task id")
+                continue
+            if task_id in local:
+                add(item, f"duplicate task {task_id!r}")
+                continue
+            local.add(task_id)
+            if task_id not in web_set:
+                add(item, f"{task_id!r} must be a task whose surface includes web")
+                continue
+            covered.add(task_id)
+    missing = [task_id for task_id in web_ids if task_id not in covered]
+    if missing:
+        add("placements", "every web task appears in a placement: " + ", ".join(missing))
+
+
 def require_text(value: object, path: str, add) -> None:
     if type(value) is not str or not value.strip():
         add(path, "must be a non-empty string")
@@ -383,12 +441,15 @@ def web_view(data: dict) -> dict:
         for task in data.get("tasks", [])
         if isinstance(task, dict) and "web" in (task.get("surface") or [])
     ]
-    return {
+    view = {
         "version": data.get("version"),
         "project": data.get("project"),
         "briefing": data.get("briefing") or [],
         "tasks": tasks,
     }
+    if "placements" in data:
+        view["placements"] = data["placements"]
+    return view
 
 
 def load_json(path: Path) -> object:

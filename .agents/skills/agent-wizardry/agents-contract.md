@@ -13,6 +13,6 @@ When you add, rename, remove, or change a script, task-runner target, package sc
 2. Update the operator wizard only when its behavior no longer matches the catalog. Keep it in the language it was written in.
 3. Set `danger` from the effect of the task. `safe` does not write or delete. `writes` changes local, remote, or shared state. `destructive` deletes, overwrites, or deploys in a way that is hard to undo. `writes` and `destructive` set `confirm` to true.
 4. Keep operator commands on the `cli` surface. Keep product guidance on the `web` surface. A web task has steps or a link and has no `run` command.
-5. Keep one catalog. When a product wizard exists, regenerate its web catalog from `wizard/catalog.json`. Do not keep a second task list in the UI.
+5. Keep one catalog. When a product wizard exists, regenerate its web catalog from `wizard/catalog.json`. When the catalog has placements, each wizard mark opens only the tasks for that place. Do not keep a second task list in the UI.
 6. Validate against the Agent Wizardry catalog spec, and fix what it reports. Use the skill's `validate_catalog.py` when it is available.
 7. Leave the wizard in place. A change that adds a way to run the project also updates the wizard.

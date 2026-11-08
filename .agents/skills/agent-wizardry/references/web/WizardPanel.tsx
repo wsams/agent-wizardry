@@ -42,16 +42,30 @@ export type WizardTask = {
   run?: unknown;
 };
 
+export type WizardPlacement = {
+  id: string;
+  title: string;
+  where: string;
+  context: string;
+  tasks: string[];
+};
+
 export type WizardCatalog = {
   project: { name: string; summary: string };
   briefing?: { title: string; body: string }[];
+  placements?: WizardPlacement[];
   tasks: WizardTask[];
 };
 
 export type WizardAnswers = Record<string, string | boolean>;
 
+/** The wizard mark. There is no hat-only emoji. */
+export const WIZARD_MARK = "🧙";
+
 type WizardButtonProps = {
   catalog: WizardCatalog;
+  /** Placement id. Required when the catalog has placements. */
+  placement?: string;
   onContinue?: (task: WizardTask, answers: WizardAnswers) => void;
 };
 
@@ -65,8 +79,25 @@ function productTasks(catalog: WizardCatalog): WizardTask[] {
   );
 }
 
-export function WizardButton({ catalog, onContinue }: WizardButtonProps) {
-  const tasks = productTasks(catalog);
+function tasksForPlacement(catalog: WizardCatalog, placementId?: string): WizardTask[] {
+  const web = productTasks(catalog);
+  const placements = catalog.placements ?? [];
+  if (placements.length === 0) {
+    return placementId ? [] : web;
+  }
+  const placement = placements.find((item) => item.id === placementId);
+  if (!placement) {
+    return [];
+  }
+  const order = new Map(placement.tasks.map((id, index) => [id, index]));
+  return web
+    .filter((task) => order.has(task.id))
+    .sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
+}
+
+export function WizardButton({ catalog, placement: placementId, onContinue }: WizardButtonProps) {
+  const placement = catalog.placements?.find((item) => item.id === placementId) ?? null;
+  const tasks = tasksForPlacement(catalog, placementId);
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -125,12 +156,15 @@ export function WizardButton({ catalog, onContinue }: WizardButtonProps) {
   }
 
   const primaryLabel = task?.href ? "Open this" : onContinue ? "Continue" : "Done";
+  const homeTitle = placement?.title ?? catalog.project.name;
+  const label = placement ? `Wizard: ${placement.title}` : "Wizard";
 
   return (
     <div className="aw-wizard">
       <button
         type="button"
         className="aw-wizard-button"
+        aria-label={label}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => {
@@ -138,7 +172,7 @@ export function WizardButton({ catalog, onContinue }: WizardButtonProps) {
           setOpen(true);
         }}
       >
-        Wizard
+        <span aria-hidden="true">{WIZARD_MARK}</span>
       </button>
       {open
         ? createPortal(
@@ -153,7 +187,7 @@ export function WizardButton({ catalog, onContinue }: WizardButtonProps) {
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="aw-dialog-head">
-                  <h2 id={titleId}>{task ? task.title : catalog.project.name}</h2>
+                  <h2 id={titleId}>{task ? task.title : homeTitle}</h2>
                   <button type="button" className="aw-close" onClick={close}>
                     Close
                   </button>
@@ -168,7 +202,12 @@ export function WizardButton({ catalog, onContinue }: WizardButtonProps) {
                     primaryLabel={primaryLabel}
                   />
                 ) : (
-                  <Home catalog={catalog} tasks={tasks} onOpen={openTask} />
+                  <Home
+                    catalog={catalog}
+                    tasks={tasks}
+                    context={placement?.context}
+                    onOpen={openTask}
+                  />
                 )}
               </div>
             </div>,
@@ -182,21 +221,25 @@ export function WizardButton({ catalog, onContinue }: WizardButtonProps) {
 function Home({
   catalog,
   tasks,
+  context,
   onOpen,
 }: {
   catalog: WizardCatalog;
   tasks: WizardTask[];
+  context?: string;
   onOpen: (task: WizardTask) => void;
 }) {
   return (
     <>
-      <p className="aw-summary">{catalog.project.summary}</p>
-      {(catalog.briefing ?? []).map((section) => (
-        <section className="aw-briefing" key={section.title}>
-          <h3>{section.title}</h3>
-          <p>{section.body}</p>
-        </section>
-      ))}
+      <p className="aw-summary">{context ?? catalog.project.summary}</p>
+      {context
+        ? null
+        : (catalog.briefing ?? []).map((section) => (
+            <section className="aw-briefing" key={section.title}>
+              <h3>{section.title}</h3>
+              <p>{section.body}</p>
+            </section>
+          ))}
       <ul className="aw-tasks">
         {tasks.map((task) => (
           <li key={task.id}>
