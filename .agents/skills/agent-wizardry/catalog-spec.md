@@ -135,7 +135,8 @@ The agent writes this program in the project's language. `references/wizard.py` 
 
 Whatever the language, the program:
 
-- Asks what to do, prints the task's context, asks for inputs, prints the command, and runs it after confirmation.
+- Asks what to do. On a terminal, each choice shows its title, its summary in lighter text, and a short line for the danger and the command. Arrow keys move, Enter chooses, and `q` leaves. Nothing runs until the person confirms. When the terminal cannot draw that menu, the same title, summary, and command are printed under a number.
+- Prints the task's context, asks for inputs, prints the command, and runs it after confirmation.
 - `--list` prints `id`, `danger`, `surface`, and `title`, separated by tabs.
 - `--briefing` prints the project briefing.
 - `--task <id> --set id=value --yes` runs a `safe` or `writes` task without prompts. Repeat `--set` for more than one input.

@@ -11,12 +11,16 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import select
 import shlex
+import shutil
 import subprocess
 import sys
+import termios
+import tty
 from pathlib import Path
 
-RUNNER_VERSION = 1
+RUNNER_VERSION = 2
 
 KIND_LABEL = {
     "script": "Script",
@@ -30,24 +34,81 @@ KIND_LABEL = {
     "app": "In the app",
 }
 
-DANGER_COLOR = {"safe": "32", "writes": "33", "destructive": "31"}
+DANGER_COLOR = {"safe": "38;5;150", "writes": "38;5;222", "destructive": "38;5;210"}
 SHELLS = {"bash", "sh", "zsh", "dash", "cmd", "powershell", "pwsh"}
 SHELL_FLAGS = {"-c", "-lc", "/c"}
 GUIDED = {"manual", "app"}
-
-
-def questionary():
-    try:
-        import questionary as module
-    except ImportError:
-        return None
-    return module
+ACCENT = "38;5;213"
+FAINT = "2;38;5;246"
+QUIET = "38;5;243"
+BODY = "38;5;252"
+BAR_DIM = "38;5;240"
 
 
 def paint(text: str, code: str) -> str:
     if not sys.stdout.isatty():
         return text
     return f"\033[{code}m{text}\033[0m"
+
+
+def wrap(text: str, width: int) -> list[str]:
+    width = max(16, width)
+    words = text.split()
+    if not words:
+        return []
+    lines: list[str] = []
+    current = words[0]
+    for word in words[1:]:
+        if len(current) + 1 + len(word) <= width:
+            current = f"{current} {word}"
+        else:
+            lines.append(current)
+            current = word
+    lines.append(current)
+    return lines
+
+
+def term_width() -> int:
+    return max(48, shutil.get_terminal_size(fallback=(80, 24)).columns)
+
+
+def lead(text: str) -> str:
+    """The first sentence, so a long project summary does not crowd the menu."""
+    cleaned = " ".join(text.split())
+    if not cleaned:
+        return ""
+    stop = cleaned.find(". ")
+    if stop != -1:
+        return cleaned[: stop + 1]
+    return cleaned
+
+
+def task_hint(task: dict) -> str:
+    """A short line under the summary: what kind of effect, and the command."""
+    danger = str(task.get("danger") or "safe")
+    run = task.get("run") if isinstance(task.get("run"), dict) else {}
+    argv = run.get("argv") if isinstance(run, dict) else None
+    if isinstance(argv, list) and argv:
+        return f"{danger} · {shlex.join(str(part) for part in argv)}"
+    if task.get("kind") in GUIDED:
+        return f"{danger} · explains the steps, and does not run a command"
+    return danger
+
+
+def menu_item(value: str, title: str, detail: str = "", meta: str = "") -> dict:
+    return {"value": value, "title": title, "detail": detail.strip(), "meta": meta.strip()}
+
+
+def tasks_as_items(tasks: list[dict]) -> list[dict]:
+    return [
+        menu_item(
+            str(task.get("id") or ""),
+            str(task.get("title") or task.get("id") or "Task"),
+            str(task.get("summary") or ""),
+            task_hint(task),
+        )
+        for task in tasks
+    ]
 
 
 def find_catalog(explicit: str | None) -> Path:
@@ -110,46 +171,162 @@ def is_interactive() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def choice_label(choice: dict) -> str:
-    help_text = choice.get("help")
-    if help_text:
-        return f"{choice['label']} ({help_text})"
-    return str(choice["label"])
+def item_rows(item: dict, selected: bool, width: int, color: bool) -> list[str]:
+    """One menu row: a bar, the name, then lighter lines for what it does."""
+    inner = max(20, width - 8)
+
+    def tone(text: str, code: str) -> str:
+        if not color:
+            return text
+        return f"\033[{code}m{text}\033[0m"
+
+    bar = tone("┃", ACCENT if selected else BAR_DIM)
+    mark = tone("›", ACCENT + ";1") if selected else " "
+    title = tone(item["title"], "1" if selected else BODY)
+    rows = [f"  {bar} {mark} {title}"]
+    for line in wrap(item.get("detail") or "", inner):
+        rows.append(f"  {bar}   {tone(line, FAINT)}")
+    meta = item.get("meta") or ""
+    if meta:
+        rows.append(f"  {bar}   {tone(meta, QUIET)}")
+    rows.append(f"  {bar}")
+    return rows
+
+
+def menu_frame(heading: str, summary: str, intro: str, items: list[dict], selected: int, width: int, height: int, color: bool) -> str:
+    def tone(text: str, code: str) -> str:
+        if not color:
+            return text
+        return f"\033[{code}m{text}\033[0m"
+
+    bar = tone("┃", ACCENT)
+    blocks = [item_rows(item, index == selected, width, color) for index, item in enumerate(items)]
+    header = [f"  {bar} {tone(heading, '1')}"]
+    for line in wrap(lead(summary), max(20, width - 6)):
+        header.append(f"  {bar} {tone(line, FAINT)}")
+    if intro:
+        header.append(f"  {bar}")
+        for line in wrap(intro, max(20, width - 6)):
+            header.append(f"  {bar} {tone(line, FAINT)}")
+    header.append(f"  {bar}")
+    footer = [
+        f"  {bar}",
+        f"  {bar} {tone('↑↓ move    enter choose    q leave', QUIET)}",
+    ]
+    room = max(6, height - len(header) - len(footer) - 1)
+    heights = [len(block) for block in blocks]
+    start = 0
+    while selected > start and sum(heights[start:selected + 1]) > room:
+        start += 1
+    end = start
+    used = 0
+    while end < len(blocks) and used + heights[end] <= room:
+        used += heights[end]
+        end += 1
+    if selected >= end:
+        end = selected + 1
+        start = end
+        used = 0
+        while start > 0 and used + heights[start - 1] <= room:
+            start -= 1
+            used += heights[start]
+    body: list[str] = []
+    if start > 0:
+        body.append(f"  {bar} {tone(f'{start} more above', QUIET)}")
+    for block in blocks[start:end]:
+        body.extend(block)
+    if end < len(blocks):
+        body.append(f"  {bar} {tone(f'{len(blocks) - end} more below', QUIET)}")
+    return "\n".join(header + body + footer) + "\n"
+
+
+def prompt_menu_plain(heading: str, items: list[dict]) -> str:
+    print(f"\n{heading}")
+    print("The lighter line under a name is what that choice does.\n")
+    for index, item in enumerate(items, start=1):
+        print(f"  {index}  {item['title']}")
+        if item.get("detail"):
+            print(f"     {item['detail']}")
+        if item.get("meta"):
+            print(f"     {item['meta']}")
+        print()
+    while True:
+        raw = input("Choose a number: ").strip()
+        if raw.isdigit() and 1 <= int(raw) <= len(items):
+            return str(items[int(raw) - 1]["value"])
+        print(f"Enter a number from 1 to {len(items)}.")
+
+
+def read_key(fd: int) -> str:
+    data = os.read(fd, 1)
+    if not data:
+        return ""
+    char = data.decode("utf-8", "replace")
+    if char != "\x1b":
+        return char
+    if select.select([fd], [], [], 0.03)[0]:
+        return char + os.read(fd, 8).decode("utf-8", "replace")
+    return char
+
+
+def prompt_menu(heading: str, summary: str, intro: str, items: list[dict]) -> str:
+    if not items:
+        raise SystemExit("There is nothing to choose.")
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        return prompt_menu_plain(heading, items)
+    fd = sys.stdin.fileno()
+    previous = termios.tcgetattr(fd)
+    selected = 0
+    sys.stdout.write("\033[?1049h\033[?25l")
+    sys.stdout.flush()
+    try:
+        tty.setraw(fd)
+        while True:
+            size = shutil.get_terminal_size(fallback=(80, 24))
+            frame = menu_frame(
+                heading,
+                summary,
+                intro,
+                items,
+                selected,
+                size.columns,
+                size.lines,
+                True,
+            )
+            sys.stdout.write("\033[H\033[J" + frame)
+            sys.stdout.flush()
+            key = read_key(fd)
+            if key in {"\x03", "q", "Q"}:
+                raise KeyboardInterrupt
+            if key in {"\x1b[A", "\x1bOA", "k"}:
+                selected = (selected - 1) % len(items)
+            elif key in {"\x1b[B", "\x1bOB", "j"}:
+                selected = (selected + 1) % len(items)
+            elif key in {"\r", "\n"}:
+                return str(items[selected]["value"])
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, previous)
+        sys.stdout.write("\033[?25h\033[?1049l")
+        sys.stdout.flush()
 
 
 def prompt_select(message: str, choices: list[dict]) -> str:
-    module = questionary()
-    if module is not None:
-        picked = module.select(
-            message,
-            choices=[
-                module.Choice(title=choice["label"], value=choice["value"])
-                for choice in choices
-            ],
-        ).ask()
-        if picked is None:
-            raise KeyboardInterrupt
-        return str(picked)
-    print(f"\n{message}")
-    for index, choice in enumerate(choices, start=1):
-        print(f"  {index}. {choice['label']}")
-    while True:
-        raw = input("Choose a number: ").strip()
-        if raw.isdigit() and 1 <= int(raw) <= len(choices):
-            return str(choices[int(raw) - 1]["value"])
-        print(f"Enter a number from 1 to {len(choices)}.")
+    items = [
+        menu_item(
+            str(choice["value"]),
+            str(choice.get("title") or choice.get("label") or choice["value"]),
+            str(choice.get("detail") or choice.get("help") or ""),
+            str(choice.get("meta") or ""),
+        )
+        for choice in choices
+    ]
+    return prompt_menu(message, "", "The lighter text is there so you can tell the choices apart.", items)
 
 
 def prompt_confirm(message: str, default: bool) -> bool:
-    module = questionary()
-    if module is not None:
-        picked = module.confirm(message, default=default).ask()
-        if picked is None:
-            raise KeyboardInterrupt
-        return bool(picked)
     hint = "Y/n" if default else "y/N"
     while True:
-        raw = input(f"{message} [{hint}]: ").strip().lower()
+        raw = input(f"{paint('┃', ACCENT)} {message} [{hint}] ").strip().lower()
         if raw == "":
             return default
         if raw in {"y", "yes"}:
@@ -159,15 +336,11 @@ def prompt_confirm(message: str, default: bool) -> bool:
         print("Answer y or n.")
 
 
-def prompt_text(message: str, default: str | None) -> str:
-    module = questionary()
-    if module is not None:
-        picked = module.text(message, default="" if default is None else default).ask()
-        if picked is None:
-            raise KeyboardInterrupt
-        return str(picked)
+def prompt_text(message: str, default: str | None, help_text: str = "") -> str:
+    if help_text and sys.stdout.isatty():
+        print(paint(help_text, FAINT))
     suffix = f" [{default}]" if default not in (None, "") else ""
-    raw = input(f"{message}{suffix}: ")
+    raw = input(f"{paint('┃', ACCENT)} {message}{suffix} ")
     if raw == "" and default is not None:
         return default
     return raw
@@ -201,8 +374,6 @@ def collect_inputs(task: dict, provided: dict[str, str], ask: bool) -> dict[str,
         prompt = str(spec.get("prompt") or key)
         kind = spec.get("type") or "string"
         required = bool(spec.get("required"))
-        if ask and spec.get("help"):
-            print(spec["help"])
         if key in provided:
             raw = provided[key]
             if kind == "confirm":
@@ -223,14 +394,18 @@ def collect_inputs(task: dict, provided: dict[str, str], ask: bool) -> dict[str,
         default = None if "default" not in spec else str(spec["default"])
         if ask and kind == "select":
             choices = [
-                {"value": choice["value"], "label": choice_label(choice)}
+                {
+                    "value": choice["value"],
+                    "title": str(choice.get("label") or choice["value"]),
+                    "detail": str(choice.get("help") or ""),
+                }
                 for choice in spec.get("choices") or []
             ]
             answers[key] = prompt_select(prompt, choices)
             continue
         if ask:
             while True:
-                raw = prompt_text(prompt, default)
+                raw = prompt_text(prompt, default, str(spec.get("help") or ""))
                 if raw == "" and required and default in (None, ""):
                     print("This one is required.")
                     continue
@@ -296,7 +471,7 @@ def resolve_cwd(root: Path, run: dict) -> Path:
 
 def confirm_run(task: dict, argv: list[str], args: argparse.Namespace) -> bool:
     danger = task.get("danger", "safe")
-    print("\n" + paint("$ " + shlex.join(argv), "1"))
+    print("\n" + paint("┃", ACCENT) + " " + paint(shlex.join(argv), "1"))
     if danger == "destructive":
         if args.yes and args.confirm_task == task["id"]:
             return True
@@ -315,20 +490,26 @@ def confirm_run(task: dict, argv: list[str], args: argparse.Namespace) -> bool:
 def show_task_context(task: dict) -> None:
     danger = str(task.get("danger", "safe"))
     kind = KIND_LABEL.get(str(task.get("kind", "")), str(task.get("kind", "")))
-    print(f"\n{paint(str(task.get('title', task.get('id', 'Task'))), '1')}")
+    title = str(task.get("title", task.get("id", "Task")))
+    bar = paint("┃", ACCENT)
+    print(f"\n{bar} {paint(title, '1')}")
     print(
-        f"{kind}  {paint(danger, DANGER_COLOR.get(danger, '0'))}  {task.get('source', '')}"
+        f"{bar} {kind}  {paint(danger, DANGER_COLOR.get(danger, '0'))}  {task.get('source', '')}"
     )
     summary = task.get("summary")
     if summary:
-        print(f"\n{summary}")
+        print(bar)
+        for line in wrap(str(summary), term_width() - 4):
+            print(f"{bar} {line}")
     if task.get("details"):
-        print(f"\n{task['details']}")
+        print(bar)
+        for line in wrap(str(task["details"]), term_width() - 4):
+            print(f"{bar} {paint(line, FAINT)}")
     prerequisites = task.get("prerequisites") or []
     if prerequisites:
-        print("\nBefore you start:")
+        print(f"{bar}\n{bar} Before you start")
         for item in prerequisites:
-            print(f"  - {item}")
+            print(f"{bar}   · {item}")
 
 
 def print_steps(task: dict) -> None:
@@ -390,20 +571,31 @@ def list_tasks(catalog: dict) -> str:
 
 def print_briefing(catalog: dict) -> None:
     project = catalog.get("project") or {}
-    print(paint(str(project.get("name", "Wizard")), "1"))
-    if project.get("summary"):
-        print(project["summary"])
+    name = str(project.get("name", "Wizard"))
+    summary = str(project.get("summary") or "")
+    if not sys.stdout.isatty():
+        print(name)
+        if summary:
+            print(summary)
+        for section in catalog.get("briefing") or []:
+            if not isinstance(section, dict):
+                continue
+            print(f"\n{section.get('title', '')}")
+            print(section.get("body", ""))
+        return
+    bar = paint("┃", ACCENT)
+    print(f"\n{bar} {paint(name, '1')}")
+    for line in wrap(summary, term_width() - 4):
+        print(f"{bar} {paint(line, FAINT)}")
     for section in catalog.get("briefing") or []:
         if not isinstance(section, dict):
             continue
-        print(f"\n{paint(str(section.get('title', '')), '1')}")
-        print(section.get("body", ""))
+        print(f"{bar}\n{bar} {paint(str(section.get('title', '')), '1')}")
+        for line in wrap(str(section.get("body") or ""), term_width() - 4):
+            print(f"{bar} {paint(line, FAINT)}")
 
 
 def choose_and_run(catalog: dict, args: argparse.Namespace, catalog_path: Path) -> int:
-    if questionary() is None:
-        print("For arrow-key prompts: pip install questionary", file=sys.stderr)
-    print_briefing(catalog)
     tasks = [
         task
         for task in catalog["tasks"]
@@ -411,14 +603,14 @@ def choose_and_run(catalog: dict, args: argparse.Namespace, catalog_path: Path) 
     ]
     if not tasks:
         raise SystemExit("This catalog has no operator tasks.")
-    choices = [
-        {
-            "value": task["id"],
-            "label": f"{task['title']}  [{task.get('danger', 'safe')}]",
-        }
-        for task in tasks
-    ]
-    picked = prompt_select("What do you want to do?", choices)
+    project = catalog.get("project") or {}
+    print_briefing(catalog)
+    picked = prompt_menu(
+        str(project.get("name") or "Wizard"),
+        str(project.get("summary") or ""),
+        "The lighter text under each name says what that choice does. Nothing runs until you pick one and confirm.",
+        tasks_as_items(tasks),
+    )
     return run_task(task_map(catalog)[picked], args, {}, catalog_path)
 
 

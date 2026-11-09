@@ -84,7 +84,7 @@ Operator commands use `"surface": ["cli"]` and a `run.argv` list. The wizard exe
 
 The program you write loads `wizard/catalog.json` and does all of this. `references/wizard.py` is a complete Python version of the same behavior. Use a prompt library the project already accepts. Otherwise the language's standard input is enough.
 
-- Print the project briefing, then ask what the person wants to do.
+- Ask what the person wants to do. On a terminal, show each task's title with its summary in lighter text underneath, plus the danger and the command, so a name alone is not the only clue. Arrow keys move and Enter chooses. A plain terminal prints the same text under numbered choices.
 - For the chosen task, show the summary, details, source, prerequisites, and danger.
 - Ask each input in order, with its help text and default.
 - Build the command from `run.argv` by the input rules in [catalog-spec.md](catalog-spec.md). Execute that list with no shell.

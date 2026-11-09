@@ -260,6 +260,31 @@ class WizardTests(unittest.TestCase):
         )
         self.assertEqual(skipped, ["sh", "sample-script.sh", "--env", "staging"])
 
+    def test_menu_shows_what_a_task_does(self) -> None:
+        task = {
+            "id": "open",
+            "title": "Start the local server",
+            "summary": "Starts the page on this computer. This is the way to get going.",
+            "kind": "script",
+            "danger": "safe",
+            "surface": ["cli"],
+            "run": {"argv": ["python3", "webapp.py"], "cwd": "."},
+        }
+        frame = wizard.menu_frame(
+            "Sample",
+            "A sample project.",
+            "The lighter text says what each choice does.",
+            wizard.tasks_as_items([task]),
+            0,
+            80,
+            24,
+            False,
+        )
+        self.assertIn("Start the local server", frame)
+        self.assertIn("Starts the page on this computer.", frame)
+        self.assertIn("safe ·", frame)
+        self.assertIn("↑↓ move", frame)
+
     def test_list_and_briefing(self) -> None:
         listed = self.run_wizard("--list")
         self.assertEqual(listed.returncode, 0, listed.stderr)
