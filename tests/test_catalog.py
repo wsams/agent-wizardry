@@ -284,6 +284,9 @@ class WizardTests(unittest.TestCase):
         self.assertIn("Starts the page on this computer.", frame)
         self.assertIn("safe ·", frame)
         self.assertIn("↑↓ move", frame)
+        drawn = wizard.screen_text(frame)
+        self.assertIn("\r\n", drawn)
+        self.assertNotIn("\n", drawn.replace("\r\n", ""))
 
     def test_list_and_briefing(self) -> None:
         listed = self.run_wizard("--list")

@@ -257,6 +257,11 @@ def prompt_menu_plain(heading: str, items: list[dict]) -> str:
         print(f"Enter a number from 1 to {len(items)}.")
 
 
+def screen_text(frame: str) -> str:
+    """Raw mode does not turn a newline into a carriage return, so each line would start where the last one ended."""
+    return "\033[H\033[J" + frame.replace("\n", "\r\n")
+
+
 def read_key(fd: int) -> str:
     data = os.read(fd, 1)
     if not data:
@@ -280,7 +285,7 @@ def prompt_menu(heading: str, summary: str, intro: str, items: list[dict]) -> st
     sys.stdout.write("\033[?1049h\033[?25l")
     sys.stdout.flush()
     try:
-        tty.setraw(fd)
+        tty.setcbreak(fd)
         while True:
             size = shutil.get_terminal_size(fallback=(80, 24))
             frame = menu_frame(
@@ -293,7 +298,7 @@ def prompt_menu(heading: str, summary: str, intro: str, items: list[dict]) -> st
                 size.lines,
                 True,
             )
-            sys.stdout.write("\033[H\033[J" + frame)
+            sys.stdout.write(screen_text(frame))
             sys.stdout.flush()
             key = read_key(fd)
             if key in {"\x03", "q", "Q"}:
