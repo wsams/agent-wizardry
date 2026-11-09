@@ -1,3 +1,13 @@
+## [1.1.0](https://github.com/wsams/agent-wizardry/compare/v1.0.0...v1.1.0) (2026-11-09)
+
+### Features
+
+* show what each wizard choice does ([6eb7781](https://github.com/wsams/agent-wizardry/commit/6eb77810cdfe821e9152cccf2982fad32d1edc19))
+
+### Bug Fixes
+
+* return the wizard menu to the left edge of each line ([89625ca](https://github.com/wsams/agent-wizardry/commit/89625caf2d976e11c617bc10944c034593b4de8f))
+
 ## 1.0.0 (2026-11-08)
 
 ### Features
