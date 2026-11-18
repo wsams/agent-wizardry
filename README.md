@@ -18,6 +18,7 @@ your-repo/
 
 The catalog records each task, the file it came from, the flags and their defaults, and whether running it is safe, a write, or destructive. The program the agent writes reads that catalog:
 
+- a menu where each task's name has its summary in lighter text underneath, so you can tell what a choice does before you pick it
 - what the task does, and the file it came from
 - what has to be true before you run it
 - each flag, with the help text and the default
